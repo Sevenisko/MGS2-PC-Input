@@ -6,7 +6,7 @@ The goal of this mod is to make MGS2: Substance much more playable on PC (Keyboa
 
 ## How to install?
 
-Simply, pick the ASI file and put it into *<gameDirectory>/bin/scripts*
+Simply, download the release package, pick the ASI file and put it into *\<gameDirectory>/bin/scripts*, and also put SDL2.dll in *\<gameDirectory>/bin*
 
 **Note**: You must have an ASI loader installed (the best way is to use V's fix, which automatically installs it)
 
