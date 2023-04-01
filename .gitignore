@@ -19,6 +19,11 @@ mono_crash.*
 # SDL Libraries
 !SDL2/lib/
 
+MGS2Input.asi
+MGS2Input.exp
+MGS2Input.lib
+MGS2Input.pdb
+
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/
