@@ -136,140 +136,64 @@ enum InputButton { IN_L1, IN_R1, IN_L2, IN_R2, IN_TRIANGLE, IN_CIRCLE, IN_CROSS,
 inline void ProcessButton(InputButton button, bool pressed) {
     switch (button) {
     case IN_L1:
-        if (pressed) {
-            inputL1         = FALSE;
-            inputL1Pressure = 255;
-        } else {
-            inputL1         = TRUE;
-            inputL1Pressure = 0;
-        }
+        inputL1        = pressed;
+        inputL1Pressure = pressed * 255;
         break;
     case IN_R1:
-        if (pressed) {
-            inputR1         = FALSE;
-            inputR1Pressure = 255;
-        } else {
-            inputR1         = TRUE;
-            inputR1Pressure = 0;
-        }
+        inputR1         = pressed;
+        inputR1Pressure = pressed * 255;
         break;
     case IN_L2:
-        if (pressed) {
-            inputL2         = FALSE;
-            inputL2Pressure = 255;
-        } else {
-            inputL2         = TRUE;
-            inputL2Pressure = 0;
-        }
+        inputL2        = pressed;
+        inputL2Pressure = pressed * 255;
         break;
     case IN_R2:
-        if (pressed) {
-            inputR2         = FALSE;
-            inputR2Pressure = 255;
-        } else {
-            inputR2         = TRUE;
-            inputR2Pressure = 0;
-        }
+        inputR2        = pressed;
+        inputR2Pressure = pressed * 255;
         break;
     case IN_TRIANGLE:
-        if (pressed) {
-            inputTriangle         = FALSE;
-            inputTrianglePressure = 255;
-        } else {
-            inputTriangle         = TRUE;
-            inputTrianglePressure = 0;
-        }
+        inputTriangle = pressed;
+        inputTrianglePressure = pressed * 255;
         break;
     case IN_CIRCLE:
-        if (pressed) {
-            inputCircle         = FALSE;
-            inputCirclePressure = 255;
-        } else {
-            inputCircle         = TRUE;
-            inputCirclePressure = 0;
-        }
+        inputCircle        = pressed;
+        inputCirclePressure = pressed * 255;
         break;
     case IN_CROSS:
-        if (pressed) {
-            inputCross         = FALSE;
-            inputCrossPressure = 255;
-        } else {
-            inputCross         = TRUE;
-            inputCrossPressure = 0;
-        }
+        inputCross         = pressed;
+        inputCrossPressure = pressed * 255;
         break;
     case IN_SQUARE:
-        if (pressed) {
-            inputSquare         = FALSE;
-            inputSquarePressure = 255;
-        } else {
-            inputSquare         = TRUE;
-            inputSquarePressure = 0;
-        }
+        inputSquare         = pressed;
+        inputSquarePressure = pressed * 255;
         break;
     case IN_SELECT:
-        if (pressed) {
-            inputSelect = FALSE;
-        } else {
-            inputSelect = TRUE;
-        }
+        inputSelect       = pressed;
         break;
     case IN_L3:
-        if (pressed) {
-            inputL3 = FALSE;
-        } else {
-            inputL3 = TRUE;
-        }
+        inputL3         = pressed;
         break;
     case IN_R3:
-        if (pressed) {
-            inputR3 = FALSE;
-        } else {
-            inputR3 = TRUE;
-        }
+        inputR3         = pressed;
         break;
     case IN_START:
-        if (pressed) {
-            inputStart = FALSE;
-        } else {
-            inputStart = TRUE;
-        }
+        inputStart         = pressed;
         break;
     case IN_DPUP:
-        if (pressed) {
-            inputDpadUp         = FALSE;
-            inputDpadUpPressure = 255;
-        } else {
-            inputDpadUp         = TRUE;
-            inputDpadUpPressure = 0;
-        }
+        inputDpadUp         = pressed;
+        inputDpadUpPressure = pressed * 255;
         break;
     case IN_DPRIGHT:
-        if (pressed) {
-            inputDpadRight         = FALSE;
-            inputDpadRightPressure = 255;
-        } else {
-            inputDpadRight         = TRUE;
-            inputDpadRightPressure = 0;
-        }
+        inputDpadRight        = pressed;
+        inputDpadRightPressure = pressed * 255;
         break;
     case IN_DPDOWN:
-        if (pressed) {
-            inputDpadDown         = FALSE;
-            inputDpadDownPressure = 255;
-        } else {
-            inputDpadDown         = TRUE;
-            inputDpadDownPressure = 0;
-        }
+        inputDpadDown         = pressed;
+        inputDpadDownPressure = pressed * 255;
         break;
     case IN_DPLEFT:
-        if (pressed) {
-            inputDpadLeft         = FALSE;
-            inputDpadLeftPressure = 255;
-        } else {
-            inputDpadLeft         = TRUE;
-            inputDpadLeftPressure = 0;
-        }
+        inputDpadLeft         = pressed;
+        inputDpadLeftPressure = pressed * 255;
         break;
     }
 }
@@ -402,9 +326,10 @@ void UpdateInput() {
         CPatch::SetChar(0x00EDAC98, gamePrimaryButtons);
         CPatch::SetChar(0x00EDAC99, gameSecondaryButtons);
 
-        // Feather L2/R2 pressure
+        /*// Feather L2/R2 pressure
         inputL2Pressure = inputL2Pressure * 0.7f;
         inputR2Pressure = inputR2Pressure * 0.7f;
+        */
 
         // Update pressure states
         CPatch::SetChar(0x00EDACA6, inputCrossPressure);
@@ -481,9 +406,6 @@ void SDLEventLoop() {
     for (;;) {
         if (gWindow) {
             SDL_Event e;
-
-            int button = 0;
-
             while (SDL_PollEvent(&e)) {
                 switch (e.type) {
                 case SDL_WINDOWEVENT:
@@ -515,25 +437,36 @@ void SDLEventLoop() {
                     if (gKeyboardEnabled) {
                         switch (e.key.keysym.sym) {
                         case SDLK_w:
-                        case SDLK_UP: ProcessButton(IN_DPUP, e.key.state != SDL_PRESSED); break;
+                        case SDLK_UP: ProcessButton(IN_DPUP, e.key.state == SDL_PRESSED); break;
                         case SDLK_s:
-                        case SDLK_DOWN: ProcessButton(IN_DPDOWN, e.key.state != SDL_PRESSED); break;
+                        case SDLK_DOWN: ProcessButton(IN_DPDOWN, e.key.state == SDL_PRESSED); break;
                         case SDLK_a:
-                        case SDLK_LEFT: ProcessButton(IN_DPLEFT, e.key.state != SDL_PRESSED); break;
+                        case SDLK_LEFT: ProcessButton(IN_DPLEFT, e.key.state == SDL_PRESSED); break;
                         case SDLK_d:
-                        case SDLK_RIGHT: ProcessButton(IN_DPRIGHT, e.key.state != SDL_PRESSED); break;
+                        case SDLK_RIGHT: ProcessButton(IN_DPRIGHT, e.key.state == SDL_PRESSED); break;
                         case SDLK_RETURN:
                             if (stageId == 60) {
-                                ProcessButton(IN_CROSS, e.key.state != SDL_PRESSED);
+                                ProcessButton(IN_CROSS, e.key.state == SDL_PRESSED);
                             }
                             break;
-                        case SDLK_TAB: ProcessButton(IN_SELECT, e.key.state != SDL_PRESSED); break;
-                        case SDLK_LCTRL: ProcessButton(IN_R1, e.key.state != SDL_PRESSED); break;
+                        case SDLK_SPACE: ProcessButton(IN_TRIANGLE, e.key.state == SDL_PRESSED); break;
+                        case SDLK_TAB: ProcessButton(IN_SELECT, e.key.state == SDL_PRESSED); break;
+                        case SDLK_LCTRL: ProcessButton(IN_SQUARE, e.key.state == SDL_PRESSED); break;
+                        case SDLK_q: ProcessButton(IN_L2, e.key.state == SDL_PRESSED);
+                            break;
+                        case SDLK_e: ProcessButton(IN_R2, e.key.state == SDL_PRESSED);
+                            break;
+                        case SDLK_LSHIFT: if (stageId != 60) ProcessButton(IN_CIRCLE, e.key.state == SDL_PRESSED);
+                            break;
+                        case SDLK_LALT:
+                            if (stageId != 60)
+                                ProcessButton(IN_CROSS, e.key.state == SDL_PRESSED);
+                            break;
                         case SDLK_ESCAPE:
                             if (stageId == 60) {
-                                ProcessButton(IN_CIRCLE, e.key.state != SDL_PRESSED);
+                                ProcessButton(IN_CIRCLE, e.key.state == SDL_PRESSED);
                             } else {
-                                ProcessButton(IN_START, e.key.state != SDL_PRESSED);
+                                ProcessButton(IN_START, e.key.state == SDL_PRESSED);
                             }
                             break;
                         }
@@ -542,23 +475,18 @@ void SDLEventLoop() {
                 case SDL_MOUSEBUTTONDOWN:
                 case SDL_MOUSEBUTTONUP:
                     switch (e.button.button) {
-                    case SDL_BUTTON_LEFT: button = 0; break;
-                    case SDL_BUTTON_RIGHT: button = 1; break;
-                    case SDL_BUTTON_MIDDLE: button = 2; break;
+                    case SDL_BUTTON_LEFT: ProcessButton(IN_SQUARE, e.button.state == SDL_PRESSED);
+                        break;
+                    case SDL_BUTTON_RIGHT: ProcessButton(IN_L1, e.button.state == SDL_PRESSED);
+                        break;
+                    case SDL_BUTTON_MIDDLE: ProcessButton(IN_R1, e.button.state == SDL_PRESSED); break;
                     }
-
-                    char buf2[256];
-                    sprintf(buf2, "Mouse press: %d - %s\n", button, e.button.state == SDL_PRESSED ? "pressed" : "released");
-                    OutputDebugStringA(buf2);
-
                     break;
                 case SDL_MOUSEMOTION:
-                    sprintf(buf2, "Mouse motion: %d - %d\n", e.motion.xrel, e.motion.yrel);
-                    OutputDebugStringA(buf2);
                     if (gMouseEnabled) {
                         if (isFirstPerson) {
-                            int inputX = 127 + (e.motion.xrel * 2);
-                            int inputY = 127 + (e.motion.yrel * 2);
+                            int inputX = 127 + (e.motion.xrel * 4);
+                            int inputY = 127 + (e.motion.yrel * 4);
 
                             if (inputX < 0)
                                 inputX = 0;
@@ -572,8 +500,6 @@ void SDLEventLoop() {
 
                             inputLeftStickX = (inputX & 0XFF);
                             inputLeftStickY = (inputY & 0XFF);
-                            sprintf(buf2, "Left stick: %d - %d\n", inputLeftStickX, inputLeftStickY);
-                            OutputDebugStringA(buf2);
                         } else {
                             int inputX = 127 + (e.motion.xrel * 2);
                             int inputY = 127 + (e.motion.yrel * 2);
@@ -590,8 +516,6 @@ void SDLEventLoop() {
 
                             inputRightStickX = (inputX & 0XFF);
                             inputRightStickY = (inputY & 0XFF);
-                            sprintf(buf2, "Right stick: %d - %d\n", inputRightStickX, inputRightStickY);
-                            OutputDebugStringA(buf2);
                         }
                     }
                     break;
