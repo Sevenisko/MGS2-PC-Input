@@ -93,6 +93,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="InputHook.cpp" />
+    <ClCompile Include="mgs2_oct0xor.cpp" />
     <ClCompile Include="MinHook\buffer.c" />
     <ClCompile Include="MinHook\hde\hde32.c" />
     <ClCompile Include="MinHook\hde\hde64.c" />
@@ -101,6 +102,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CPatch.h" />
+    <ClInclude Include="ini.h" />
+    <ClInclude Include="mgs2sos.h" />
     <ClInclude Include="MinHook\buffer.h" />
     <ClInclude Include="MinHook\hde\hde32.h" />
     <ClInclude Include="MinHook\hde\hde64.h" />

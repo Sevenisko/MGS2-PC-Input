@@ -17,6 +17,7 @@
     <ClCompile Include="MinHook\trampoline.c">
       <Filter>MinHook</Filter>
     </ClCompile>
+    <ClCompile Include="mgs2_oct0xor.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="MinHook">
@@ -49,5 +50,7 @@
       <Filter>MinHook</Filter>
     </ClInclude>
     <ClInclude Include="CPatch.h" />
+    <ClInclude Include="mgs2sos.h" />
+    <ClInclude Include="ini.h" />
   </ItemGroup>
 </Project>

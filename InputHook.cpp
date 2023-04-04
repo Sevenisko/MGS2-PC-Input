@@ -2,11 +2,14 @@
 #include "MinHook/MinHook.h"
 #include <SDL.h>
 #include <SDL_syswm.h>
-#include <Windows.h>
 #include <dinput.h>
+#include <fstream>
+#include <iostream>
 #include <stdio.h>
 #include <thread>
 #include <unordered_map>
+#include "ini.h"
+#include "mgs2sos.h"
 
 void DebugLog(const char* fmt, ...) {
     va_list args;
@@ -19,6 +22,7 @@ void DebugLog(const char* fmt, ...) {
 
 BOOL& isFirstPerson = *(BOOL*)0x00F6DE80;
 uint8_t& stageId    = *(uint8_t*)0x00A08198;
+void* gclVariables  = (void*)0xA01F34;
 
 SDL_Window* gWindow;
 
@@ -136,7 +140,7 @@ enum InputButton { IN_L1, IN_R1, IN_L2, IN_R2, IN_TRIANGLE, IN_CIRCLE, IN_CROSS,
 inline void ProcessButton(InputButton button, bool pressed) {
     switch (button) {
     case IN_L1:
-        inputL1        = pressed;
+        inputL1         = pressed;
         inputL1Pressure = pressed * 255;
         break;
     case IN_R1:
@@ -144,19 +148,19 @@ inline void ProcessButton(InputButton button, bool pressed) {
         inputR1Pressure = pressed * 255;
         break;
     case IN_L2:
-        inputL2        = pressed;
+        inputL2         = pressed;
         inputL2Pressure = pressed * 255;
         break;
     case IN_R2:
-        inputR2        = pressed;
+        inputR2         = pressed;
         inputR2Pressure = pressed * 255;
         break;
     case IN_TRIANGLE:
-        inputTriangle = pressed;
+        inputTriangle         = pressed;
         inputTrianglePressure = pressed * 255;
         break;
     case IN_CIRCLE:
-        inputCircle        = pressed;
+        inputCircle         = pressed;
         inputCirclePressure = pressed * 255;
         break;
     case IN_CROSS:
@@ -167,24 +171,16 @@ inline void ProcessButton(InputButton button, bool pressed) {
         inputSquare         = pressed;
         inputSquarePressure = pressed * 255;
         break;
-    case IN_SELECT:
-        inputSelect       = pressed;
-        break;
-    case IN_L3:
-        inputL3         = pressed;
-        break;
-    case IN_R3:
-        inputR3         = pressed;
-        break;
-    case IN_START:
-        inputStart         = pressed;
-        break;
+    case IN_SELECT: inputSelect = pressed; break;
+    case IN_L3: inputL3 = pressed; break;
+    case IN_R3: inputR3 = pressed; break;
+    case IN_START: inputStart = pressed; break;
     case IN_DPUP:
         inputDpadUp         = pressed;
         inputDpadUpPressure = pressed * 255;
         break;
     case IN_DPRIGHT:
-        inputDpadRight        = pressed;
+        inputDpadRight         = pressed;
         inputDpadRightPressure = pressed * 255;
         break;
     case IN_DPDOWN:
@@ -196,6 +192,14 @@ inline void ProcessButton(InputButton button, bool pressed) {
         inputDpadLeftPressure = pressed * 255;
         break;
     }
+}
+
+inline const char* GetStageName1() {
+    return (const char*)(*(DWORD*)gclVariables + 0x1C);
+}
+
+inline const char* GetStageName2() {
+    return (const char*)(*(DWORD*)gclVariables + 0x2C);
 }
 
 void UpdateInput() {
@@ -402,6 +406,22 @@ void UpdateInput() {
     }
 }
 
+SDL_Keycode MoveForwardKey;
+SDL_Keycode MoveBackwardKey;
+SDL_Keycode MoveLeftKey;
+SDL_Keycode MoveRightKey;
+SDL_Keycode UseKey;
+SDL_Keycode PunchKey;
+SDL_Keycode FireKey;
+SDL_Keycode CrouchKey;
+SDL_Keycode ConfirmKey;
+SDL_Keycode CancelKey;
+SDL_Keycode CodecKey;
+SDL_Keycode SelectItemKey;
+SDL_Keycode SelectWeaponKey;
+
+bool enableSos = false;
+
 void SDLEventLoop() {
     for (;;) {
         if (gWindow) {
@@ -452,11 +472,11 @@ void SDLEventLoop() {
                         case SDLK_SPACE: ProcessButton(IN_TRIANGLE, e.key.state == SDL_PRESSED); break;
                         case SDLK_TAB: ProcessButton(IN_SELECT, e.key.state == SDL_PRESSED); break;
                         case SDLK_LCTRL: ProcessButton(IN_SQUARE, e.key.state == SDL_PRESSED); break;
-                        case SDLK_q: ProcessButton(IN_L2, e.key.state == SDL_PRESSED);
-                            break;
-                        case SDLK_e: ProcessButton(IN_R2, e.key.state == SDL_PRESSED);
-                            break;
-                        case SDLK_LSHIFT: if (stageId != 60) ProcessButton(IN_CIRCLE, e.key.state == SDL_PRESSED);
+                        case SDLK_q: ProcessButton(IN_L2, e.key.state == SDL_PRESSED); break;
+                        case SDLK_e: ProcessButton(IN_R2, e.key.state == SDL_PRESSED); break;
+                        case SDLK_LSHIFT:
+                            if (stageId != 60)
+                                ProcessButton(IN_CIRCLE, e.key.state == SDL_PRESSED);
                             break;
                         case SDLK_LALT:
                             if (stageId != 60)
@@ -475,18 +495,16 @@ void SDLEventLoop() {
                 case SDL_MOUSEBUTTONDOWN:
                 case SDL_MOUSEBUTTONUP:
                     switch (e.button.button) {
-                    case SDL_BUTTON_LEFT: ProcessButton(IN_SQUARE, e.button.state == SDL_PRESSED);
-                        break;
-                    case SDL_BUTTON_RIGHT: ProcessButton(IN_L1, e.button.state == SDL_PRESSED);
-                        break;
+                    case SDL_BUTTON_LEFT: ProcessButton(IN_SQUARE, e.button.state == SDL_PRESSED); break;
+                    case SDL_BUTTON_RIGHT: ProcessButton(IN_L1, e.button.state == SDL_PRESSED); break;
                     case SDL_BUTTON_MIDDLE: ProcessButton(IN_R1, e.button.state == SDL_PRESSED); break;
                     }
                     break;
                 case SDL_MOUSEMOTION:
                     if (gMouseEnabled) {
                         if (isFirstPerson) {
-                            int inputX = 127 + (e.motion.xrel * 4);
-                            int inputY = 127 + (e.motion.yrel * 4);
+                            int inputX = 127 + (e.motion.xrel * 3);
+                            int inputY = 127 + (e.motion.yrel * 3);
 
                             if (inputX < 0)
                                 inputX = 0;
@@ -501,21 +519,26 @@ void SDLEventLoop() {
                             inputLeftStickX = (inputX & 0XFF);
                             inputLeftStickY = (inputY & 0XFF);
                         } else {
-                            int inputX = 127 + (e.motion.xrel * 2);
-                            int inputY = 127 + (e.motion.yrel * 2);
+                            if (enableSos) {
+                                mouseMovement_X = e.motion.xrel;
+                                mouseMovement_Y = e.motion.yrel;
+                            } else {
+                                int inputX = 127 + (e.motion.xrel * 2);
+                                int inputY = 127 + (e.motion.yrel * 2);
 
-                            if (inputX < 0)
-                                inputX = 0;
-                            else if (inputX > 255)
-                                inputX = 255;
+                                if (inputX < 0)
+                                    inputX = 0;
+                                else if (inputX > 255)
+                                    inputX = 255;
 
-                            if (inputY < 0)
-                                inputY = 0;
-                            else if (inputY > 255)
-                                inputY = 255;
+                                if (inputY < 0)
+                                    inputY = 0;
+                                else if (inputY > 255)
+                                    inputY = 255;
 
-                            inputRightStickX = (inputX & 0XFF);
-                            inputRightStickY = (inputY & 0XFF);
+                                inputRightStickX = (inputX & 0XFF);
+                                inputRightStickY = (inputY & 0XFF);
+                            }
                         }
                     }
                     break;
@@ -523,6 +546,137 @@ void SDLEventLoop() {
             }
         }
     }
+}
+
+std::string defaultConfigFile = "[Controls]\n"
+                                "MoveForward = W\n"
+                                "MoveBackward = S\n"
+                                "MoveLeft = A\n"
+                                "MoveRight = D\n"
+                                "Use = F\n"
+                                "Punch = Left Shift\n"
+                                "Fire = Left Ctrl\n"
+                                "Crouch = Left Alt\n"
+                                "Confirm = Return\n"
+                                "Cancel = Escape\n"
+                                "Codec = Tab\n"
+                                "SelectItem = Q\n"
+                                "SelectWeapon = E\n"
+                                "\n"
+                                "[mgs2sos]\n"
+                                "Enable = true\n"
+                                "Sensitivity = 0.6\n"
+                                "InvertX = false\n"
+                                "InvertY = false\n";
+
+void LoadConfig() {
+    try {
+        inih::INIReader ini("MGS2Input.ini");
+        const auto& controlsMoveForward  = ini.Get<std::string>("Controls", "MoveForward");
+        const auto& controlsMoveBackward = ini.Get<std::string>("Controls", "MoveBackward");
+        const auto& controlsMoveLeft     = ini.Get<std::string>("Controls", "MoveLeft");
+        const auto& controlsMoveRight    = ini.Get<std::string>("Controls", "MoveRight");
+        const auto& controlsUse          = ini.Get<std::string>("Controls", "Use");
+        const auto& controlsPunch        = ini.Get<std::string>("Controls", "Punch");
+        const auto& controlsFire         = ini.Get<std::string>("Controls", "Fire");
+        const auto& controlsCrouch       = ini.Get<std::string>("Controls", "Crouch");
+        const auto& controlsConfirm      = ini.Get<std::string>("Controls", "Confirm");
+        const auto& controlsCancel       = ini.Get<std::string>("Controls", "Cancel");
+        const auto& controlsCodec        = ini.Get<std::string>("Controls", "Codec");
+        const auto& controlsSelectItem   = ini.Get<std::string>("Controls", "SelectItem");
+        const auto& controlsSelectWeapon = ini.Get<std::string>("Controls", "SelectWeapon");
+
+        const auto& mgs2sosEnable      = ini.Get<bool>("mgs2sos", "Enable");
+        const auto& mgs2sosSensitivity = ini.Get<float>("mgs2sos", "Sensitivity");
+        const auto& mgs2sosInvertX     = ini.Get<bool>("mgs2sos", "InvertX");
+        const auto& mgs2sosInvertY     = ini.Get<bool>("mgs2sos", "InvertY");
+
+        MoveForwardKey  = SDL_GetKeyFromName(controlsMoveForward.c_str());
+        MoveBackwardKey = SDL_GetKeyFromName(controlsMoveBackward.c_str());
+        MoveLeftKey     = SDL_GetKeyFromName(controlsMoveLeft.c_str());
+        MoveRightKey    = SDL_GetKeyFromName(controlsMoveRight.c_str());
+        UseKey          = SDL_GetKeyFromName(controlsUse.c_str());
+        PunchKey        = SDL_GetKeyFromName(controlsPunch.c_str());
+        FireKey         = SDL_GetKeyFromName(controlsFire.c_str());
+        CrouchKey       = SDL_GetKeyFromName(controlsCrouch.c_str());
+        ConfirmKey      = SDL_GetKeyFromName(controlsConfirm.c_str());
+        CancelKey       = SDL_GetKeyFromName(controlsCancel.c_str());
+        CodecKey        = SDL_GetKeyFromName(controlsCodec.c_str());
+        SelectItemKey   = SDL_GetKeyFromName(controlsSelectItem.c_str());
+        SelectWeaponKey = SDL_GetKeyFromName(controlsSelectWeapon.c_str());
+
+        enableSos   = mgs2sosEnable;
+        Sensitivity = mgs2sosSensitivity;
+        Invert_X    = mgs2sosInvertX;
+        Invert_Y    = mgs2sosInvertY;
+    }
+    catch (std::runtime_error& ex) {
+        DebugLog("%s\n", ex.what());
+    }
+}
+
+void InstallOffset(DWORD address, void* funcPtr) {
+    WriteProcessMemory(GetCurrentProcess(), (LPVOID)address, &funcPtr, sizeof(funcPtr), NULL);
+}
+
+DWORD InstallHook(DWORD address, void* funcPtr, bool jump = false) {
+    BYTE buf[10];
+    memset(buf, 0, sizeof(buf));
+
+    DWORD target = (DWORD)funcPtr;
+
+    if (jump) {
+        buf[0] = 0xE9;
+    } else {
+        buf[0] = 0xE8;
+    }
+
+    *(DWORD*)(buf + 1) = (DWORD)(target - (address + 5));
+
+    WriteProcessMemory(GetCurrentProcess(), (LPVOID)address, buf, 5, NULL);
+
+    return target;
+}
+
+void WriteBytes(DWORD address, uint8_t* buf, size_t size) {
+    WriteProcessMemory(GetCurrentProcess(), (LPVOID)address, buf, size, NULL);
+}
+
+void InitializeSOS() {
+    InstallOffset(0x00883E8D, &camera_handler);
+    InstallOffset(0x00884934, &camera_handler);
+    InstallOffset(0x008849B9, &camera_handler);
+    InstallHook(0x00884A2E, &camera_handler);
+    InstallHook(0x004E7702, &check_if_snake_is_next_to_wall_controls);
+    InstallHook(0x008CF1AA, &convert_stick_to_button);
+    InstallHook(0x004BE585, &check_if_snake_needs_to_jump);
+    InstallOffset(0x0087D9D4, &camera_transitions_handler);
+    InstallOffset(0x0099CA04, &start_paddemo);
+    InstallOffset(0x004C9798, &paddemo_handler);
+    InstallHook(0x004B05EF, &diff_direction_for_swimming);
+    InstallHook(0x004B05F8, &diff_direction_for_swimming);
+    InstallOffset(0x0099C32C, &chara_func_0xDFADB);
+    InstallHook(0x004EB239, &get_camera_direction_fix_for_hanging);
+    InstallHook(0x004EB242, &diff_direction_for_hanging1);
+    InstallHook(0x004EB253, &diff_direction_for_hanging2);
+    InstallHook(0x004C2448, &set_direction_for_PL_SubjectMove_wrap_with_set_stick_direction);
+    InstallHook(0x004BA74D, &is_rightstick_used);
+    InstallHook(0x004BA8EF, &is_rightstick_used);
+    InstallHook(0x004BB764, &is_rightstick_used);
+    InstallHook(0x004BC8B4, &is_rightstick_used);
+    InstallHook(0x004BC8B4, &get_blade_direction);
+    InstallHook(0x004BAD07, &get_blade_direction);
+    InstallHook(0x004BAFDB, &get_blade_direction);
+    InstallHook(0x004BB055, &get_blade_direction);
+    InstallHook(0x004BB864, &get_blade_direction);
+    InstallHook(0x004BC8DE, &get_blade_direction);
+    InstallHook(0x004BA551, &check_if_special_blade_attack);
+    InstallHook(0x004BBB65, &diff_direction_for_blade_protection);
+    uint8_t b1[2] { 0x90, 0x90 };
+    WriteBytes(0x004BBB72, b1, 2);
+    uint8_t b2[4] { 0x66, 0x89, 0x46, 0x6A };
+    WriteBytes(0x004BBB74, b2, 4);
+    InstallHook(0x004E8B04, &raiden_event_msg_motion);
 }
 
 extern "C" __declspec(dllexport) void InitializeASI() {
@@ -540,6 +694,12 @@ extern "C" __declspec(dllexport) void InitializeASI() {
     MH_CreateHookApi(L"user32", "RegisterClassExA", &RegisterClassExA_Hook, (LPVOID*)&RegisterClassExA_original);
 
     MH_EnableHook(MH_ALL_HOOKS);
+
+    LoadConfig();
+
+    if (enableSos) {
+        InitializeSOS();
+    }
 
     std::thread sdlThread(SDLEventLoop), inputThread(UpdateInput);
     sdlThread.detach();
