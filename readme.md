@@ -26,6 +26,6 @@ If you encounter any issues, please let me know via Issues tab.
 
 ### Known issues
 
-- Mouse control is not way too accurate
+- Mouse control is in some parts wrong
   
-  - That's because I'm remapping the mouse motion into a stick movement (the game has that as a single byte) - maybe in the future I'll try to reverse the input system and try to replace it completely
+  - Actually, that's caused by remapping the mouse motion into a stick movement - may trick it sometime (for FPS mode, i'll have to take a look at the game code)
