@@ -611,7 +611,14 @@ void LoadConfig() {
         Invert_Y    = mgs2sosInvertY;
     }
     catch (std::runtime_error& ex) {
-        DebugLog("%s\n", ex.what());
+        char buf[256];
+        sprintf(buf, "Failed to parse config file:\n%s", ex.what());
+
+        ShowWindow(currentWindow, SW_HIDE);
+
+        MessageBoxA(NULL, buf, "Error", MB_OK|MB_ICONERROR);
+
+        ExitProcess(1);
     }
 }
 
