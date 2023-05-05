@@ -410,6 +410,11 @@ void set_new_tps_camera_pos_and_trg(NEW_TPS_CAMERA* ws, CAMERA_MGS2_PC* camera_c
     float player_pos[4];
     get_player_pos(player_pos, false);
 
+    /*char buf[128];
+    sprintf(buf, "Pos: [%f, %f, %f, %f]\n", player_pos[0], player_pos[1], player_pos[2], player_pos[3]);
+    OutputDebugStringA(buf);
+    */
+
     ws->vec_obj_pos.vec[0] = player_pos[0] + (float)(pos_corrections_table[0] * 500.0);
     ws->vec_obj_pos.vec[1] = player_pos[1] + (float)(pos_corrections_table[1] * 500.0);
     ws->vec_obj_pos.vec[2] = player_pos[2] + (float)(pos_corrections_table[2] * 500.0);
@@ -562,7 +567,15 @@ void set_camera_mul_values(NEW_TPS_CAMERA* ws) {
     ws->pos_mul_value2 = ws->pos_mul_value2 + (float)((float)(1.0 - ws->pos_mul_value2) * 0.33333);
 }
 
+extern int failCheck;
+
 void convert_rightstick_data(NEW_TPS_CAMERA* ws) {
+    failCheck++;
+
+    if (failCheck >= 3) {
+        mouseMovement_X = mouseMovement_Y = 0;
+    }
+
     int rx_ = mouseMovement_X;
     int ry_ = mouseMovement_Y;
 
@@ -595,7 +608,7 @@ void convert_rightstick_data(NEW_TPS_CAMERA* ws) {
             rx_fixed = 0.0;
     }
 
-    ws->rx = rx_fixed * Sensitivity;
+    ws->rx = rx_ * Sensitivity;
 
     float ry_fixed;
     if (ry_ < 0) {
@@ -608,7 +621,7 @@ void convert_rightstick_data(NEW_TPS_CAMERA* ws) {
             ry_fixed = 0.0;
     }
 
-    ws->ry = ry_fixed * Sensitivity;
+    ws->ry = ry_ * Sensitivity;
 }
 
 void init_new_tps_camera(CAMERA_MGS2_PC* camera) {
@@ -664,11 +677,36 @@ bool is_patchable_camera(CAMERA_MGS2_PC* camera) {
     return false;
 }
 
+int rotX, rotY;
+
 void set_next_player_camera_special(CAMERA_OBJECT* cw, int flag) {
     switch (cw->camera.unk0) {
     case 4:
         if ((flag & 0x100) != 0) {
-            memcpy(cw->camera.rotate.vec, (void*)(0xF6DE70 + cw->camera.channel_id * 8), 8);
+            failCheck++;
+
+            if (failCheck >= 3) {
+                mouseMovement_X = mouseMovement_Y = 0;
+            }
+            rotX -= mouseMovement_X;
+            rotY += mouseMovement_Y;
+
+            if (rotX > 65535)
+                rotX = 65535;
+            if (rotX < -65535)
+                rotX = -65535;
+
+            if (rotY > 800)
+                rotY = 800;
+            if (rotY < -800)
+                rotY = -800;
+
+            cw->camera.rotate.vec[1] = 0 + rotX;
+            cw->camera.rotate.vec[0] = 0 + rotY;
+
+            //osd_message("Mouse movement: [%d, %d]\nCamera rotation: [%d, %d]", mouseMovement_X, mouseMovement_Y, cw->camera.rotate.vec[1], cw->camera.rotate.vec[0]);
+
+            //memcpy(cw->camera.rotate.vec, (void*)(0xF6DE70 + cw->camera.channel_id * 8), 8);
         }
         calc_and_set_trg(cw->camera.position.vec, cw->camera.target.vec, cw->camera.rotate.vec, &cw->camera.track);
         break;
@@ -858,6 +896,7 @@ void set_next_player_camera(CAMERA_OBJECT* cw, int flag) {
 void __cdecl camera_handler(CAMERA_OBJECT* cw) {
     if (*(DWORD*)Cameras_Daemon) {
         int flag = cw->camera.flag;
+
         if ((flag & 0x1000) != 0) {
             channel_del_camera(cw->camera.position.vec);
             destroy_object(cw);

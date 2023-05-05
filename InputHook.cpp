@@ -1,5 +1,7 @@
 #include "CPatch.h"
 #include "MinHook/MinHook.h"
+#include "ini.h"
+#include "mgs2sos.h"
 #include <SDL.h>
 #include <SDL_syswm.h>
 #include <dinput.h>
@@ -8,8 +10,8 @@
 #include <stdio.h>
 #include <thread>
 #include <unordered_map>
-#include "ini.h"
-#include "mgs2sos.h"
+
+#define IS_KEY(keyBind) e.key.keysym.sym == keyBind
 
 void DebugLog(const char* fmt, ...) {
     va_list args;
@@ -135,7 +137,13 @@ BOOL inputSlowPressure      = false;
 // Rumble
 BYTE outputRumble = 0;
 
+int failCheck = 0;
+
 enum InputButton { IN_L1, IN_R1, IN_L2, IN_R2, IN_TRIANGLE, IN_CIRCLE, IN_CROSS, IN_SQUARE, IN_L3, IN_R3, IN_START, IN_SELECT, IN_DPUP, IN_DPDOWN, IN_DPLEFT, IN_DPRIGHT };
+
+inline bool IsInMenu() {
+    return stageId == 60 || stageId == 55;
+}
 
 inline void ProcessButton(InputButton button, bool pressed) {
     switch (button) {
@@ -414,6 +422,10 @@ SDL_Keycode UseKey;
 SDL_Keycode PunchKey;
 SDL_Keycode FireKey;
 SDL_Keycode CrouchKey;
+SDL_Keycode SelectUpKey;
+SDL_Keycode SelectDownKey;
+SDL_Keycode SelectLeftKey;
+SDL_Keycode SelectRightKey;
 SDL_Keycode ConfirmKey;
 SDL_Keycode CancelKey;
 SDL_Keycode CodecKey;
@@ -455,43 +467,98 @@ void SDLEventLoop() {
                     */
 
                     if (gKeyboardEnabled) {
-                        switch (e.key.keysym.sym) {
-                        case SDLK_w:
-                        case SDLK_UP: ProcessButton(IN_DPUP, e.key.state == SDL_PRESSED); break;
-                        case SDLK_s:
-                        case SDLK_DOWN: ProcessButton(IN_DPDOWN, e.key.state == SDL_PRESSED); break;
-                        case SDLK_a:
-                        case SDLK_LEFT: ProcessButton(IN_DPLEFT, e.key.state == SDL_PRESSED); break;
-                        case SDLK_d:
-                        case SDLK_RIGHT: ProcessButton(IN_DPRIGHT, e.key.state == SDL_PRESSED); break;
-                        case SDLK_RETURN:
+                        if (IS_KEY(MoveForwardKey) && !IsInMenu()) {
+                            if (e.key.state == SDL_PRESSED)
+                                inputLeftStickY = 0;
+                            else
+                                inputLeftStickY = 127;
+                            //ProcessButton(IN_DPUP, e.key.state == SDL_PRESSED);
+                        }
+
+                        if (IS_KEY(MoveBackwardKey) && !IsInMenu()) {
+                            if (e.key.state == SDL_PRESSED)
+                                inputLeftStickY = 255;
+                            else
+                                inputLeftStickY = 127;
+                            //ProcessButton(IN_DPDOWN, e.key.state == SDL_PRESSED);
+                        }
+
+                        if (IS_KEY(MoveLeftKey) && !IsInMenu()) {
+                            if (e.key.state == SDL_PRESSED)
+                                inputLeftStickX = 0;
+                            else
+                                inputLeftStickX = 127;
+                            //ProcessButton(IN_DPLEFT, e.key.state == SDL_PRESSED);
+                        }
+
+                        if (IS_KEY(MoveRightKey) && !IsInMenu()) {
+                            if (e.key.state == SDL_PRESSED)
+                                inputLeftStickX = 255;
+                            else
+                                inputLeftStickX = 127;
+                            //ProcessButton(IN_DPRIGHT, e.key.state == SDL_PRESSED);
+                        }
+
+                        if (IS_KEY(SelectUpKey) && IsInMenu() && !isFirstPerson) {
+                            ProcessButton(IN_DPUP, e.key.state == SDL_PRESSED);
+                        }
+
+                        if (IS_KEY(SelectDownKey) && IsInMenu() && !isFirstPerson) {
+                            ProcessButton(IN_DPDOWN, e.key.state == SDL_PRESSED);
+                        }
+
+                        if (IS_KEY(SelectLeftKey) && IsInMenu() && !isFirstPerson) {
+                            ProcessButton(IN_DPLEFT, e.key.state == SDL_PRESSED);
+                        }
+
+                        if (IS_KEY(SelectRightKey) && IsInMenu() && !isFirstPerson) {
+                            ProcessButton(IN_DPRIGHT, e.key.state == SDL_PRESSED);
+                        }
+
+                        if (IS_KEY(ConfirmKey) && IsInMenu()) {
+                            ProcessButton(IN_CROSS, e.key.state == SDL_PRESSED);
+                        }
+
+                        if (IS_KEY(UseKey)) {
+                            ProcessButton(IN_TRIANGLE, e.key.state == SDL_PRESSED);
+                        }
+
+                        if (IS_KEY(CodecKey)) {
+                            ProcessButton(IN_SELECT, e.key.state == SDL_PRESSED);
+                        }
+
+                        if (IS_KEY(FireKey)) {
+                            ProcessButton(IN_SQUARE, e.key.state == SDL_PRESSED);
+                        }
+
+                        if (IS_KEY(SelectItemKey)) {
+                            ProcessButton(IN_L2, e.key.state == SDL_PRESSED);
+                        }
+
+                        if (IS_KEY(SelectWeaponKey)) {
+                            ProcessButton(IN_R2, e.key.state == SDL_PRESSED);
+                        }
+
+                        if (IS_KEY(PunchKey) && !IsInMenu()) {
+                            ProcessButton(IN_CIRCLE, e.key.state == SDL_PRESSED);
+                        }
+
+                        if (IS_KEY(CrouchKey) && !IsInMenu()) {
+                            ProcessButton(IN_CROSS, e.key.state == SDL_PRESSED);
+                        }
+
+                        if (IS_KEY(CancelKey)) {
                             if (stageId == 60) {
-                                ProcessButton(IN_CROSS, e.key.state == SDL_PRESSED);
-                            }
-                            break;
-                        case SDLK_SPACE: ProcessButton(IN_TRIANGLE, e.key.state == SDL_PRESSED); break;
-                        case SDLK_TAB: ProcessButton(IN_SELECT, e.key.state == SDL_PRESSED); break;
-                        case SDLK_LCTRL: ProcessButton(IN_SQUARE, e.key.state == SDL_PRESSED); break;
-                        case SDLK_q: ProcessButton(IN_L2, e.key.state == SDL_PRESSED); break;
-                        case SDLK_e: ProcessButton(IN_R2, e.key.state == SDL_PRESSED); break;
-                        case SDLK_LSHIFT:
-                            if (stageId != 60)
                                 ProcessButton(IN_CIRCLE, e.key.state == SDL_PRESSED);
-                            break;
-                        case SDLK_LALT:
-                            if (stageId != 60)
+                            } else if (stageId == 55) {
                                 ProcessButton(IN_CROSS, e.key.state == SDL_PRESSED);
-                            break;
-                        case SDLK_ESCAPE:
-                            if (stageId == 60) {
-                                ProcessButton(IN_CIRCLE, e.key.state == SDL_PRESSED);
                             } else {
                                 ProcessButton(IN_START, e.key.state == SDL_PRESSED);
                             }
-                            break;
                         }
                     }
                     break;
+
                 case SDL_MOUSEBUTTONDOWN:
                 case SDL_MOUSEBUTTONUP:
                     switch (e.button.button) {
@@ -502,26 +569,27 @@ void SDLEventLoop() {
                     break;
                 case SDL_MOUSEMOTION:
                     if (gMouseEnabled) {
-                        if (isFirstPerson) {
-                            int inputX = 127 + (e.motion.xrel * 3);
-                            int inputY = 127 + (e.motion.yrel * 3);
-
-                            if (inputX < 0)
-                                inputX = 0;
-                            else if (inputX > 255)
-                                inputX = 255;
-
-                            if (inputY < 0)
-                                inputY = 0;
-                            else if (inputY > 255)
-                                inputY = 255;
-
-                            inputLeftStickX = (inputX & 0XFF);
-                            inputLeftStickY = (inputY & 0XFF);
+                        if (enableSos) {
+                            failCheck = 0;
+                            mouseMovement_X = e.motion.xrel;
+                            mouseMovement_Y = e.motion.yrel;
                         } else {
-                            if (enableSos) {
-                                mouseMovement_X = e.motion.xrel;
-                                mouseMovement_Y = e.motion.yrel;
+                            if (isFirstPerson) {
+                                int inputX = 127 + (e.motion.xrel * 3);
+                                int inputY = 127 + (e.motion.yrel * 3);
+
+                                if (inputX < 0)
+                                    inputX = 0;
+                                else if (inputX > 255)
+                                    inputX = 255;
+
+                                if (inputY < 0)
+                                    inputY = 0;
+                                else if (inputY > 255)
+                                    inputY = 255;
+
+                                inputLeftStickX = (inputX & 0XFF);
+                                inputLeftStickY = (inputY & 0XFF);
                             } else {
                                 int inputX = 127 + (e.motion.xrel * 2);
                                 int inputY = 127 + (e.motion.yrel * 2);
@@ -557,6 +625,10 @@ std::string defaultConfigFile = "[Controls]\n"
                                 "Punch = Left Shift\n"
                                 "Fire = Left Ctrl\n"
                                 "Crouch = Left Alt\n"
+                                "SelectUp = Up\n"
+                                "SelectDown = Down\n"
+                                "SelectLeft = Left\n"
+                                "SelectRight = Right\n"
                                 "Confirm = Return\n"
                                 "Cancel = Escape\n"
                                 "Codec = Tab\n"
@@ -570,6 +642,15 @@ std::string defaultConfigFile = "[Controls]\n"
                                 "InvertY = false\n";
 
 void LoadConfig() {
+    std::ifstream file("MGS2Input.ini");
+
+    if (!file.is_open()) {
+        std::ofstream outFile("MGS2Input.ini");
+        outFile << defaultConfigFile;
+        outFile.close();
+    } else
+        file.close();
+
     try {
         inih::INIReader ini("MGS2Input.ini");
         const auto& controlsMoveForward  = ini.Get<std::string>("Controls", "MoveForward");
@@ -580,6 +661,10 @@ void LoadConfig() {
         const auto& controlsPunch        = ini.Get<std::string>("Controls", "Punch");
         const auto& controlsFire         = ini.Get<std::string>("Controls", "Fire");
         const auto& controlsCrouch       = ini.Get<std::string>("Controls", "Crouch");
+        const auto& controlsSelectUp     = ini.Get<std::string>("Controls", "SelectUp");
+        const auto& controlsSelectDown   = ini.Get<std::string>("Controls", "SelectDown");
+        const auto& controlsSelectLeft   = ini.Get<std::string>("Controls", "SelectLeft");
+        const auto& controlsSelectRight  = ini.Get<std::string>("Controls", "SelectRight");
         const auto& controlsConfirm      = ini.Get<std::string>("Controls", "Confirm");
         const auto& controlsCancel       = ini.Get<std::string>("Controls", "Cancel");
         const auto& controlsCodec        = ini.Get<std::string>("Controls", "Codec");
@@ -598,6 +683,10 @@ void LoadConfig() {
         UseKey          = SDL_GetKeyFromName(controlsUse.c_str());
         PunchKey        = SDL_GetKeyFromName(controlsPunch.c_str());
         FireKey         = SDL_GetKeyFromName(controlsFire.c_str());
+        SelectUpKey     = SDL_GetKeyFromName(controlsSelectUp.c_str());
+        SelectDownKey   = SDL_GetKeyFromName(controlsSelectDown.c_str());
+        SelectLeftKey   = SDL_GetKeyFromName(controlsSelectLeft.c_str());
+        SelectRightKey  = SDL_GetKeyFromName(controlsSelectRight.c_str());
         CrouchKey       = SDL_GetKeyFromName(controlsCrouch.c_str());
         ConfirmKey      = SDL_GetKeyFromName(controlsConfirm.c_str());
         CancelKey       = SDL_GetKeyFromName(controlsCancel.c_str());
@@ -609,14 +698,13 @@ void LoadConfig() {
         Sensitivity = mgs2sosSensitivity;
         Invert_X    = mgs2sosInvertX;
         Invert_Y    = mgs2sosInvertY;
-    }
-    catch (std::runtime_error& ex) {
+    } catch (std::runtime_error& ex) {
         char buf[256];
         sprintf(buf, "Failed to parse config file:\n%s", ex.what());
 
         ShowWindow(currentWindow, SW_HIDE);
 
-        MessageBoxA(NULL, buf, "Error", MB_OK|MB_ICONERROR);
+        MessageBoxA(NULL, buf, "Error", MB_OK | MB_ICONERROR);
 
         ExitProcess(1);
     }
@@ -686,6 +774,14 @@ void InitializeSOS() {
     InstallHook(0x004E8B04, &raiden_event_msg_motion);
 }
 
+struct Vec3 {
+    float x, y, z;
+};
+
+int calcAtanVec3_Hook(const Vec3& vec) {
+    return (int64_t)(atan2(vec.x, vec.z) * 651.89844 + 4.5) & 0xFFF;
+}
+
 extern "C" __declspec(dllexport) void InitializeASI() {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0) {
         char buf[256];
@@ -699,6 +795,7 @@ extern "C" __declspec(dllexport) void InitializeASI() {
     MH_CreateHookApi(L"user32", "CreateWindowExA", &CreateWindowExA_Hook, (LPVOID*)&CreateWindowExA_original);
     MH_CreateHookApi(L"user32", "SetWindowTextA", &SetWindowTextA_Hook, (LPVOID*)&SetWindowTextA_original);
     MH_CreateHookApi(L"user32", "RegisterClassExA", &RegisterClassExA_Hook, (LPVOID*)&RegisterClassExA_original);
+    MH_CreateHook((LPVOID)0x008D2360, (LPVOID)&calcAtanVec3_Hook, NULL);
 
     MH_EnableHook(MH_ALL_HOOKS);
 

@@ -54,7 +54,7 @@ struct CAMERA_CHANNEL_MGS2_PC {
 };
 
 struct DAEMON_OBJECT {
-    BYTE object_header[0x30];
+    BYTE object_header[0x30]; // 48
     CAMERA_CHANNEL_MGS2_PC channels[2];
 };
 
