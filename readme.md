@@ -24,8 +24,4 @@ Also simple, you must have Visual Studio 2022 in order to build it.
 
 If you encounter any issues, please let me know via Issues tab.
 
-### Known issues
-
-- Mouse control is in some parts wrong
-  
-  - Actually, that's caused by remapping the mouse motion into a stick movement - may trick it sometime (for FPS mode, i'll have to take a look at the game code)
+# 
