@@ -6,9 +6,11 @@ This mod is based on [Revised input driver for Metal Gear Solid 2](https://githu
 
 ## How to install?
 
-Simply, download the release package, pick the ASI and INI file and put them into *\<gameDirectory>/bin/scripts*, and also put SDL2.dll in *\<gameDirectory>/bin*
+Simply, download the release package, pick the ASI file and put it into *\<gameDirectory>/bin/scripts*, and also put SDL2.dll in *\<gameDirectory>/bin*
 
 **Note**: You must have an ASI loader installed (the best way is to use V's fix, which automatically installs it)
+
+**Another note**: Config file is generated automatically if it doesn't exist
 
 ## How to build?
 
